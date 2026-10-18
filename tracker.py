@@ -306,6 +306,19 @@ class ResultsTable(DataTable):
         Binding("o", "app.sort_results", "Ordenar"),
     ]
 
+    # Av Pág en la última fila pide la página siguiente; Re Pág en la primera, la anterior
+    def action_page_down(self):
+        if self.row_count and self.cursor_row >= self.row_count - 1:
+            self.app.action_page(1)
+        else:
+            super().action_page_down()
+
+    def action_page_up(self):
+        if self.cursor_row <= 0:
+            self.app.action_page(-1, cursor_end=True)
+        else:
+            super().action_page_up()
+
 
 class LibraryTable(DataTable):
     BINDINGS = [
@@ -484,8 +497,11 @@ class TrackerApp(App):
         self.query_one("#status", Label).update(Text(msg))
 
     def show_view(self, view, rows):
+        cursor_end = view.pop("cursor_end", False)
         self.view, self.rows, self.result_sort = view, rows, 0
         self.render_results()
+        if cursor_end and rows:
+            self.query_one("#results", DataTable).move_cursor(row=len(rows) - 1)
 
     def render_results(self):
         view, table = self.view, self.query_one("#results", DataTable)
@@ -542,10 +558,10 @@ class TrackerApp(App):
             self.load_view({"kind": "modules", "title": f"Letra {row['name']}",
                             "params": {"request": "view_by_list", "query": row["id"]}})
 
-    def action_page(self, delta):
+    def action_page(self, delta, cursor_end=False):
         v = self.view
         if v and "params" in v and 1 <= v["page"] + delta <= v["pages"]:
-            self.load_view({**v, "page": v["page"] + delta})
+            self.load_view({**v, "page": v["page"] + delta, "cursor_end": cursor_end})
 
     def action_back(self):
         if self.history:

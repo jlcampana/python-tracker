@@ -64,6 +64,7 @@ tracker
 | `Enter` | Abrir sección, descargar y reproducir |
 | `/` | Ir al buscador o al filtro |
 | `[` / `]` | Página anterior / siguiente (explorar) |
+| `Re Pág` / `Av Pág` | Desplazarse; en la primera o última fila cambia de página (explorar) |
 | `Retroceso` / `Esc` | Volver al listado anterior (explorar) |
 | `d` | Descargar sin reproducir (explorar) |
 | `o` | Cambiar el orden |
