@@ -28,6 +28,8 @@ queda en una biblioteca local que puedes escuchar sin conexión.
 **Reproductor**
 - Pausa, parar, siguiente/anterior, saltar ±10 s y volumen
 - Al acabar una canción pasa a la siguiente de la lista desde la que la elegiste
+- Vúmetro estéreo que se mueve con la música (el canal izquierdo crece hacia la izquierda y el
+  derecho hacia la derecha, con marcadores de pico)
 
 ## Dependencias
 

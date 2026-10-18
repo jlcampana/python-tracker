@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Tracker: explorador de modarchive.org y reproductor de música tracker para la terminal."""
+import array
 import hashlib
 import html
+import math
+import operator
 import os
 import re
 import signal
@@ -295,6 +298,86 @@ def fmt_time(secs):
     return f"{secs // 60:02d}:{secs % 60:02d}"
 
 
+# ---------------------------------------------------------------- vúmetro
+
+VU_RATE = 11025   # frecuencia a la que se analiza (no hace falta más para medir volumen)
+VU_FPS = 30       # niveles por segundo
+VU_DB = 36        # rango en dB que cubre la barra
+VU_TOP = -6       # dBFS que llenan la barra (la música casi nunca llega a 0 dB de media)
+
+
+def vu_envelope(path):
+    """Nivel (izquierdo, derecho) entre 0 y 1 de cada 1/VU_FPS s de la canción.
+
+    openmpt123 renderiza el módulo entero a PCM mucho más rápido que en tiempo real, así que
+    se analiza aparte y el audio que suena no se toca.
+    """
+    try:
+        raw = subprocess.run(["openmpt123", "--stdout", "--batch", "-q", "--no-float",
+                              "--samplerate", str(VU_RATE), "--channels", "2", "--", str(path)],
+                             capture_output=True, timeout=120).stdout
+    except (subprocess.SubprocessError, OSError):
+        return []
+    samples = array.array("h")
+    samples.frombytes(raw[:len(raw) // 4 * 4])
+    win = VU_RATE // VU_FPS * 2
+
+    def level(ch):
+        if not ch:
+            return 0.0
+        rms = math.sqrt(sum(map(operator.mul, ch, ch)) / len(ch))
+        return max(0.0, min(1.0, 1 + (20 * math.log10(max(rms, 1) / 32768) - VU_TOP) / VU_DB))
+
+    return [(level(samples[i:i + win:2]), level(samples[i + 1:i + win:2]))
+            for i in range(0, len(samples), win)]
+
+
+class VUMeter(Static):
+    """Barra estéreo que crece desde el centro: el canal izquierdo hacia la izquierda y el derecho hacia la derecha."""
+
+    def on_mount(self):
+        self.levels = [0.0, 0.0]
+        self.peaks = [0.0, 0.0]
+        self.peak_at = [0.0, 0.0]
+        self.idle = False
+
+    def show_levels(self, target):
+        now = time.monotonic()
+        for i in (0, 1):
+            t = target[i] if target else 0.0
+            # sube al instante y baja poco a poco, como un vúmetro de verdad
+            self.levels[i] = t if t > self.levels[i] else max(t, self.levels[i] - 0.05)
+            if self.levels[i] >= self.peaks[i]:
+                self.peaks[i], self.peak_at[i] = self.levels[i], now
+            elif now - self.peak_at[i] > 0.6:
+                self.peaks[i] = max(self.levels[i], self.peaks[i] - 0.015)
+        if not any(self.levels) and not any(self.peaks):
+            if self.idle:
+                return
+            self.idle = True
+        else:
+            self.idle = False
+        half = max(1, (self.size.width - 1) // 2)
+        left = self._side(self.levels[0], self.peaks[0], half)
+        right = self._side(self.levels[1], self.peaks[1], half)
+        self.update(Text.assemble(*reversed(left), ("┃", "dim"), *right))
+
+    @staticmethod
+    def _side(level, peak, half):
+        """Celdas de un canal, desde el centro hacia fuera."""
+        n, p = round(level * half), round(peak * half)
+        cells = []
+        for i in range(half):
+            color = "green" if i < half * 0.6 else "yellow" if i < half * 0.85 else "red"
+            if i < n:
+                cells.append(("█", color))
+            elif i == p - 1:
+                cells.append(("█", f"bold bright_{color}"))
+            else:
+                cells.append((" ", ""))
+        return cells
+
+
 # ---------------------------------------------------------------- interfaz
 
 class ResultsTable(DataTable):
@@ -361,8 +444,9 @@ class TrackerApp(App):
     #explore-main, #library-main { height: 1fr; }
     #status, #libstatus { height: 1; padding: 0 1; color: $text-muted; }
     DataTable { height: 1fr; }
-    #player { height: 4; border: round $accent; padding: 0 1; }
+    #player { height: 5; border: round $accent; padding: 0 1; }
     #now-row { height: 1; }
+    #vu { height: 1; }
     #now { width: 1fr; }
     #keys { width: auto; color: $text-muted; }
     #progress-row { height: 1; }
@@ -400,6 +484,7 @@ class TrackerApp(App):
         self.queue = []
         self.qpos = -1
         self.play_token = 0
+        self.vu = {}                # ruta -> niveles del vúmetro
 
     def compose(self) -> ComposeResult:
         with TabbedContent(initial="explorar"):
@@ -419,6 +504,7 @@ class TrackerApp(App):
             with Horizontal(id="now-row"):
                 yield Static("■ Parado", id="now")
                 yield Label("1/2 pestañas · espacio pausa · , . ±10s · - + volumen", id="keys")
+            yield VUMeter(id="vu")
             with Horizontal(id="progress-row"):
                 yield ProgressBar(id="bar", total=100, show_eta=False, show_percentage=False)
                 yield Label("00:00 / 00:00", id="time")
@@ -426,6 +512,7 @@ class TrackerApp(App):
 
     def on_mount(self):
         self.set_interval(0.5, self.tick)
+        self.set_interval(1 / VU_FPS, self.draw_vu)
         self.open_menu("tophits")
         self.query_one("#results").focus()
         self.scan_library()
@@ -690,9 +777,24 @@ class TrackerApp(App):
             self.notify(f"No existe {escape(track['path'])}", severity="error")
             return
         self.player.play(track)
+        if track["path"] not in self.vu:
+            self.load_vu(track["path"])
         self.lib.played(track["path"])
         self.update_now()
         self.render_library()
+
+    @work(thread=True, group="vu")
+    def load_vu(self, path):
+        self.vu[path] = vu_envelope(path)
+
+    def draw_vu(self):
+        p, target = self.player, None
+        if p.track and p.proc and not p.paused:
+            env = self.vu.get(p.track["path"])
+            i = int(p.position * VU_FPS)
+            if env and i < len(env):
+                target = env[i]
+        self.query_one("#vu", VUMeter).show_levels(target)
 
     def update_now(self):
         t = self.player.track
