@@ -7,6 +7,9 @@ Navegas por modarchive de forma interactiva y, al elegir una canción, se descar
 `~/Música/Tracker` y empieza a sonar. Lo descargado (y cualquier módulo que copies en esa carpeta)
 queda en una biblioteca local que puedes escuchar sin conexión.
 
+Hay una versión en Dart, con interfaz al estilo de macOS y soporte de ratón, en
+[jlcampana/tracker](https://github.com/jlcampana/tracker). Las dos comparten biblioteca.
+
 ## Funciones
 
 **Explorar modarchive**
