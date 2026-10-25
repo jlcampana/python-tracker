@@ -8,7 +8,7 @@ Navegas por modarchive de forma interactiva y, al elegir una canción, se descar
 queda en una biblioteca local que puedes escuchar sin conexión.
 
 Hay una versión en Dart, con interfaz al estilo de macOS y soporte de ratón, en
-[jlcampana/tracker](https://github.com/jlcampana/tracker). Las dos comparten biblioteca.
+[jlcampana/DartTracker](https://github.com/jlcampana/DartTracker). Las dos comparten biblioteca.
 
 ## Funciones
 
