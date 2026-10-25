@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
-# Instalación de terminal-tracker en Fedora o Ubuntu / Debian.
+# Instalación de python-tracker en Fedora o Ubuntu / Debian.
 #
 # Desde una copia del repositorio:  ./install.sh
 # Sin clonar nada:
-#   curl -fsSL https://raw.githubusercontent.com/jlcampana/terminal-tracker/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/jlcampana/python-tracker/main/install.sh | bash
 #
 # Instala openmpt123 y Python (pide sudo), descarga la aplicación en
-# ~/.local/share/terminal-tracker si no se ejecuta desde una copia, crea el entorno de Python
+# ~/.local/share/python-tracker si no se ejecuta desde una copia, crea el entorno de Python
 # y enlaza el comando 'tracker' en ~/.local/bin. Volver a ejecutarlo actualiza la aplicación.
 set -euo pipefail
 
-REPO="https://github.com/jlcampana/terminal-tracker"
+REPO="https://github.com/jlcampana/python-tracker"
 VENV="$HOME/.local/share/trackerplay-venv"
 BIN_DIR="$HOME/.local/bin"
 
@@ -51,7 +51,7 @@ SRC="${BASH_SOURCE[0]:-}"
 if [[ -n $SRC && -f $SRC && -f "$(dirname "$(readlink -f "$SRC")")/tracker.py" ]]; then
     APP_DIR="$(dirname "$(readlink -f "$SRC")")"
 else
-    APP_DIR="$HOME/.local/share/terminal-tracker"
+    APP_DIR="$HOME/.local/share/python-tracker"
     if [[ -d $APP_DIR/.git ]]; then
         echo "==> Actualizando la aplicación en $APP_DIR"
         git -C "$APP_DIR" pull --ff-only -q
