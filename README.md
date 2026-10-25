@@ -1,4 +1,4 @@
-# trackerplay
+# terminal-tracker
 
 Explorador de [The Mod Archive](https://modarchive.org) y reproductor de música tracker
 (MOD, XM, S3M, IT y [muchos más formatos](https://lib.openmpt.org/libopenmpt/)) para la terminal.
@@ -44,15 +44,23 @@ Python del sistema. El resto (descargas, base de datos SQLite) usa solo la bibli
 
 ## Instalación
 
+Sin clonar nada (Fedora y Ubuntu / Debian):
+
 ```bash
-git clone git@github.com:jlcampana/trackerplay.git
-cd trackerplay
-./install-fedora.sh     # en Fedora
-./install-ubuntu.sh     # en Ubuntu / Debian
+curl -fsSL https://raw.githubusercontent.com/jlcampana/terminal-tracker/main/install.sh | bash
 ```
 
-Los scripts instalan los paquetes del sistema (piden `sudo`), crean el entorno de Python y enlazan
-el comando `tracker` en `~/.local/bin`.
+O desde una copia del repositorio:
+
+```bash
+git clone https://github.com/jlcampana/terminal-tracker.git
+cd terminal-tracker
+./install.sh
+```
+
+El script detecta la distribución, instala los paquetes del sistema (pide `sudo`), crea el entorno
+de Python y enlaza el comando `tracker` en `~/.local/bin`. Con `curl | bash` la aplicación se
+descarga en `~/.local/share/terminal-tracker`; volver a ejecutar la misma línea la actualiza.
 
 ## Uso
 

@@ -7,7 +7,7 @@ APP_DIR="$(dirname "$(readlink -f "$0")")"
 VENV="$HOME/.local/share/trackerplay-venv"
 
 if ! command -v openmpt123 >/dev/null; then
-    echo "Falta openmpt123. Ejecuta install-fedora.sh o install-ubuntu.sh" >&2
+    echo "Falta openmpt123. Ejecuta install.sh" >&2
     exit 1
 fi
 
